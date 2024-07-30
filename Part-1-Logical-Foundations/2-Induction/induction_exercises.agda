@@ -139,3 +139,4 @@ open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_)
 -- simplifying ((suc m) + n) + p ≡ (suc m) + (n + p) to suc((m + n) + p) ≡ suc (m + (n + p)) and rewriting via inductive hypothesis gives us the same term on both sides.
 
 -- COMMUTATIVITY WITH REWRITE --
+--
