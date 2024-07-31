@@ -3,7 +3,7 @@
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong; sym)
 open Eq.≡-Reasoning using (begin_; _≡⟨⟩_; _≡⟨_⟩_; _∎)
-open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_; _^_)
 
 -- ASSOCIATIVITY BY INDUCTION --
 +-assoc : ∀ (m n p : ℕ) → (m + n) + p ≡ m + (n + p)
@@ -220,3 +220,84 @@ open import Data.Nat using (ℕ; zero; suc; _+_; _*_; _∸_)
 
 -- Ex. 7: +*^
 -- 2024/07/31
+-- Law 1
+^-distrib-l-+-* : ∀ (m n p : ℕ ) → m ^ (n + p) ≡ (m ^ n) * (m ^ p)
+^-distrib-l-+-* m 0 p rewrite +-identity-r′ (m ^ p) = refl 
+^-distrib-l-+-* m (suc n) p rewrite ^-distrib-l-+-* m n p | sym (*-assoc m (m ^ n) (m ^ p)) = refl
+
+-- Law 2
+^-distrib-r-* : ∀ (m n p : ℕ ) → (m * n) ^ p ≡ (m ^ p) * (n ^ p)
+^-distrib-r-* m n zero = refl 
+^-distrib-r-* m n (suc p) rewrite ^-distrib-r-* m n p | sym (*-assoc (m * n) (m ^ p) (n ^ p)) | *-assoc m n (m ^ p) | *-comm n (m ^ p) | sym (*-assoc m (m ^ p) n) | *-assoc (m * (m ^ p)) n (n ^ p) = refl
+-- Phew! Was there a better way?
+
+-- Law 3
+^-annihilator-l : ∀ (n : ℕ) → 1 ^ n ≡ 1
+^-annihilator-l zero = refl
+^-annihilator-l (suc n) rewrite ^-annihilator-l n = refl
+
+
+
+^-*-assoc : ∀ (m n p : ℕ) → (m ^ n) ^ p ≡ m ^ (n * p)
+^-*-assoc m n zero rewrite *-annihilator-r n = refl 
+^-*-assoc m zero (suc p) rewrite ^-annihilator-l p = refl  
+^-*-assoc m (suc n) (suc p) rewrite *-assoc m (m ^ n) ((m * (m ^ n)) ^ p)
+    | *-comm n (suc p)
+    | ^-distrib-l-+-* m p (n + p * n)
+    | ^-distrib-l-+-* m n (p * n)
+    | sym (*-assoc (m ^ p) (m ^ n) (m ^ (p * n)))
+    | *-comm (m ^ p) (m ^ n)
+    | *-assoc (m ^ n) (m ^ p) (m ^ (p * n))
+    | *-comm p n 
+    | sym (^-*-assoc m n p)
+    | ^-distrib-r-* m (m ^ n) p
+    = refl
+-- Phew! This took more re-arranging than expected. But at least I realized this more readable proof format can be parsed by agda!
+
+-- Ex. 8: Bin Laws
+
+data Bin : Set where
+    ⟨⟩ : Bin
+    _O : Bin → Bin
+    _I : Bin → Bin
+
+inc : Bin → Bin
+inc ⟨⟩ = ⟨⟩ I
+inc (m O) = m I
+inc (m I) = (inc m) O
+
+to_ : ℕ → Bin
+to 0 = ⟨⟩ O
+to (suc m) = inc (to m)
+
+from_ : Bin → ℕ
+from ⟨⟩ = 0
+from (m O) = 2 * (from m)
+from (m I) = (2 * (from m)) + 1
+
+-- Law 1: from (inc b) ≡ suc (from b)
+bin-from-inc : ∀ (b : Bin) → from (inc b) ≡ suc (from b)
+bin-from-inc ⟨⟩ = refl
+bin-from-inc (b O) rewrite +-identity-r (from b)
+    | +-suc ((from b) + (from b)) 0
+    | +-identity-r ((from b) + (from b))
+    = refl
+bin-from-inc (b I) rewrite bin-from-inc (b)
+    | sym (+-suc (from b) 0)
+    | +-identity-r (from b)
+    | +-assoc (from b) (from b) 1
+    = refl
+
+-- Law 2: to (from b) ≡ b
+-- Doesn't work, because multiple binary strings denote the same number:
+-- to (from (⟨⟩ O O I))
+-- ≡ to (2 * from (⟨⟩ O O) + 1)
+-- ≡ to (1)
+-- ≡ inc (to 0)
+-- ≡ inc (⟨⟩ O)
+-- ≡ ⟨⟩ I
+
+-- Law 3: from (to n) ≡ n
+bin-from-to : ∀ (n : ℕ) → from (to n) ≡ n
+bin-from-to zero = refl 
+bin-from-to (suc n) rewrite bin-from-inc (to n) | bin-from-to n = refl
