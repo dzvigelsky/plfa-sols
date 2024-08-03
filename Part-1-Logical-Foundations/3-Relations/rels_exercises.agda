@@ -181,10 +181,77 @@ data Total′ : ℕ → ℕ → Set where -- Indexed data type
     | *-comm p m
     | *-comm p n
     = +-mono-≤ m n (m * p) (n * p) m≤n (*-mono-ˡ-≤ m n p m≤n)
+
 -- Tricky! We had to use our result about the monotonicity of + w.r.t ≤.
 
--- *-mono-≤ : ∀ (m n p q : ℕ)
---     → m ≤ n
---     → p ≤ q
---     --------
---     → m * p ≤ n * q
+*-mono-ʳ-≤ : ∀ (m n p : ℕ)
+    → m ≤ n
+    --------
+    → p * m ≤ p * n
+
+*-mono-ʳ-≤ m n p m≤n rewrite *-comm p m | *-comm p n = *-mono-ˡ-≤ m n p m≤n
+
+*-mono-≤ : ∀ (m n p q : ℕ)
+    → m ≤ n
+    → p ≤ q
+    --------
+    → m * p ≤ n * q
+
+*-mono-≤ m n p q m≤n p≤q = ≤-trans (*-mono-ˡ-≤ m n p m≤n) (*-mono-ʳ-≤ p q n p≤q) -- Similar to +-mono-≤
+
+-- STRICT INEQUALITY
+
+infix 4 _<_
+
+data _<_ : ℕ → ℕ → Set where
+    
+    z<s : ∀ {n : ℕ}
+        --------
+        → 0 < suc n
+
+    s<s : ∀ {m n : ℕ}
+        → m < n
+        --------
+        → suc m < suc n
+
+-- Ex. 4: Transitivity of < 
+<-trans : ∀ {m n p : ℕ}
+    → m < n
+    → n < p
+    --------
+    → m < p
+
+<-trans z<s (s<s n<p) = z<s
+<-trans (s<s m<n) (s<s n<p) = s<s (<-trans m<n n<p)
+
+-- Ex. 5: Trichotomy
+-- Either m < n, n < m, or m ≡ n.
+
+data Trichotomous (m n : ℕ) : Set where
+    
+    smaller :
+        m < n
+        --------
+        → Trichotomous m n
+    
+    bigger :
+        n < m -- m > n
+        --------
+        → Trichotomous m n
+    
+    equal :
+        m ≡ n
+        --------
+        → Trichotomous m n
+
+<-trichotomous : ∀ (m n : ℕ) → Trichotomous m n
+
+<-trichotomous zero zero = equal refl
+<-trichotomous zero (suc n) = smaller z<s
+<-trichotomous (suc m) 0 = bigger z<s
+<-trichotomous (suc m) (suc n) with <-trichotomous m n
+...     | smaller m<n = smaller (s<s m<n)
+...     | bigger n<m = bigger (s<s n<m)
+...     | equal x=x = equal (cong suc x=x)
+
+-- Ex. 6: +-mono-<
