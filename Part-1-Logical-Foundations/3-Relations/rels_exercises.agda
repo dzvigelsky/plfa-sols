@@ -2,8 +2,8 @@
 
 import Relation.Binary.PropositionalEquality as Eq
 open Eq using (_≡_; refl; cong)
-open import Data.Nat using (ℕ; zero; suc; _+_)
-open import Data.Nat.Properties using (+-comm; +-identityʳ)
+open import Data.Nat using (ℕ; zero; suc; _+_; _*_)
+open import Data.Nat.Properties using (+-comm; +-identityʳ; *-comm)
 
 data _≤_ : ℕ → ℕ → Set where
     z≤n : ∀ {n : ℕ} -- z≤n is a constructor name
@@ -67,7 +67,7 @@ inv-z≤n (z≤n) = refl
     → m ≤ p
 
 ≤-trans (z≤n) _ = z≤n -- Provide evidence that 0 ≤ n; we can omit n ≤ p because we get m ≤ p by 0≤n.
-≤-trans (s≤s m≤n) (s≤s n≤p) = s≤s (≤-trans m≤n n≤p) -- Step: s≤s m≤n is evidence that suc m ≤ suc n. We want to show that if suc n ≤ suc p, then suc m ≤ suc p. But by the induction hypothesis, we have that m ≤ p. So s≤s (m ≤ p) provides evidence that suc m ≤ suc p.
+≤-trans (s≤s m≤n) (s≤s n≤p) = s≤s (≤-trans m≤n n≤p) -- Step: s≤s m≤n is evidence that suc m ≤ suc n. So n is of the form (suc n). So our second piece of evidence must be (s≤s n≤p). By the induction hypothesis, we have that m ≤ p. So s≤s (m ≤ p) provides evidence that suc m ≤ suc p, completing our proof where the arguments where refined.
 
 -- Alternative proof, with explicit parameters
 ≤-trans′ : ∀ (m n p : ℕ)
@@ -79,3 +79,112 @@ inv-z≤n (z≤n) = refl
 ≤-trans′ zero n p (z≤n) _ = z≤n 
 ≤-trans′ (suc m) (suc n) (suc p) (s≤s m≤n) (s≤s n≤p) = s≤s (≤-trans′ m n p m≤n n≤p)
 -- Note: what about (s≤s m≤n) z≤n? In this case we have a contradiction as the first evidence implies n is not 0 and the second implies n is 0.
+
+-- 2024/08/01
+
+≤-antisym : ∀ {m n : ℕ}
+    → m ≤ n
+    → n ≤ m
+    --------
+    → m ≡ n
+
+≤-antisym z≤n z≤n = refl
+≤-antisym (s≤s m≤n) (s≤s n≤m) = cong suc (≤-antisym m≤n n≤m)
+
+-- Ex. 2: Why is it okay to omit cases where one argument is z≤n and the other is s≤s?
+-- Suppose we have ≤-antisym z≤n (s≤s m≤n). Then Agda knows (by pattern matching) that m = 0. But then the second witness cannot be s≤s (n≤m), because it implies that m > 0. ≤-antisym (s≤s m≤n) z≤n being invalid follows similarly.
+
+-- TOTALITY --
+data Total (m n : ℕ) : Set where -- Data type with parameters
+    forward :
+        m ≤ n
+        --------
+        → Total m n
+    
+    flipped :
+        n ≤ m
+        --------
+        → Total m n
+
+data Total′ : ℕ → ℕ → Set where -- Indexed data type
+    forward′ : ∀ {m n : ℕ}
+        → m ≤ n
+        --------
+        → Total′ m n
+    
+    flipped′ : ∀ {m n : ℕ}
+        → n ≤ m
+        --------
+        → Total′ m n
+
+-- 2024/08/03
+≤-total : ∀ (m n : ℕ) → Total m n
+≤-total zero n = forward z≤n
+≤-total (suc m) 0 = flipped z≤n
+≤-total (suc m) (suc n) with ≤-total m n -- ≤-total m n returns a value of type Total m n, we want to match it.
+...     | forward m≤n = forward (s≤s m≤n) -- Case 1: Total m n was constructed via forward m≤n. We can get Total (suc m) (suc n) via forward (s≤s m≤n)
+...     | flipped n≤m = flipped (s≤s n≤m) -- Case 2: Total m n was constructed via flipped n≤m. Similar to Case 1.
+
+-- Alternative proof via a helper function:
+≤-total′ : ∀ (m n : ℕ) → Total m n
+≤-total′ 0 n = forward z≤n
+≤-total′ (suc m) 0 = flipped z≤n
+≤-total′ (suc m) (suc n) = helper (≤-total′ m n)
+    where -- With indented definition(s). Variables on LHS of "=" are in scope; as are identifiers on RHS of "="
+    helper : Total m n → Total (suc m) (suc n) -- We want to construct Total (suc m) (suc n)
+    helper (forward m≤n) = forward (s≤s m≤n) -- Case 1: Total m n constructed via forward.
+    helper (flipped n≤m) = flipped (s≤s n≤m) -- Case 2: Total m n constructed via flipped.
+
+-- MONOTONICITY
+-- We want to show that + is monotonic w.r.t. ≤. So,
+-- ∀ {m n p q : ℕ} → m ≤ n → p ≤ q → m + p ≤ n + q
+
+-- Part 1: Addition is monotonic on the right.
++-monoʳ-≤ : ∀ (n p q : ℕ)
+    → p ≤ q
+    --------
+    → n + p ≤ n + q
+
++-monoʳ-≤ zero p q p≤q = p≤q
++-monoʳ-≤ (suc n) p q p≤q = s≤s (+-monoʳ-≤ n p q p≤q)
+
+-- Part 2: Addition is monotonic on the left.
++-mono-ˡ≤ : ∀ (n p q : ℕ)
+    → n ≤ p
+    --------
+    → n + q ≤ p + q
+
++-mono-ˡ≤ n p q n≤p rewrite +-comm n q | +-comm p q = +-monoʳ-≤ q n p n≤p -- Used commutativity of + to reduce proof to Part 1 lemma.
+
+-- Part 3: Th-m.
++-mono-≤ : ∀ (m n p q : ℕ)
+    → m ≤ n
+    → p ≤ q
+    --------
+    → m + p ≤ n + q
+
++-mono-≤ m n p q m≤n p≤q = ≤-trans (+-monoʳ-≤ m p q p≤q) (+-mono-ˡ≤ m n q m≤n) 
+-- m + p ≤ m + q and m + q ≤ n + q implies m + p ≤ n + q by transitivity.
+
+--  Ex. 3: *-mono-≤
+-- Idea: (m * p ≤ n * p) ∧ (n * p ≤ n * q) ⇒ (m * p ≤ n * q) by transitivity.
+
+*-mono-ˡ-≤ : ∀ (m n p : ℕ)
+    → m ≤ n
+    --------
+    → m * p ≤ n * p
+
+*-mono-ˡ-≤ m n 0 z≤n = z≤n
+*-mono-ˡ-≤ (suc m) (suc n) 0 (s≤s x) rewrite *-comm (suc m) 0 = z≤n
+*-mono-ˡ-≤ m n (suc p) m≤n rewrite *-comm m (suc p)
+    | *-comm n (suc p)
+    | *-comm p m
+    | *-comm p n
+    = +-mono-≤ m n (m * p) (n * p) m≤n (*-mono-ˡ-≤ m n p m≤n)
+-- Tricky! We had to use our result about the monotonicity of + w.r.t ≤.
+
+-- *-mono-≤ : ∀ (m n p q : ℕ)
+--     → m ≤ n
+--     → p ≤ q
+--     --------
+--     → m * p ≤ n * q
