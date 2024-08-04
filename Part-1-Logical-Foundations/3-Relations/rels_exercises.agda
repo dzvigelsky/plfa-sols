@@ -255,3 +255,38 @@ data Trichotomous (m n : ℕ) : Set where
 ...     | equal x=x = equal (cong suc x=x)
 
 -- Ex. 6: +-mono-<
++-monoʳ-< : ∀ (m n p : ℕ)
+    → m < n
+    --------
+    → p + m < p + n
+
++-monoʳ-< 0 (suc n) 0 z<s = z<s -- Base case 1: (p = 0) m = 0
++-monoʳ-< (suc m) (suc n) 0 sm<sn = sm<sn  -- Base case 2: (p = 0) Both m, n are successors
++-monoʳ-< (suc m) (suc n) (suc p) sm<sn = s<s (+-monoʳ-< (suc m) (suc n) p sm<sn) -- Inductive case 1: (p is suc) Both m, n are successors
++-monoʳ-< 0 (suc n) (suc p) z<s = s<s (+-monoʳ-< 0 (suc n) p z<s) -- Inductive case 2: (p is suc) m = 0
+-- Tricky! If you're working with v : suc m < suc n, name v something like sm<sn
+
++-monoˡ-< : ∀ (m n p : ℕ)
+    → m < n
+    --------
+    → m + p < n + p
+
++-monoˡ-< m n p m<n rewrite +-comm m p | +-comm n p = +-monoʳ-< m n p m<n
+
++-mono-< : ∀ (m n p q : ℕ)
+    → m < n
+    → p < q
+    --------
+    → m + p < n + q
+
++-mono-< m n p q m<n p<q = <-trans (+-monoˡ-< m n p m<n) (+-monoʳ-< p q n p<q)
+
+-- ≤-iff-<
+
+≤-implies-< : ∀ (m n : ℕ)
+    → suc m ≤ n
+    --------
+    → m < n
+
+≤-implies-< zero (suc n) sm≤sn = z<s
+≤-implies-< (suc m) (suc n) ssm≤sn = {!   !}
