@@ -289,4 +289,5 @@ data Trichotomous (m n : ℕ) : Set where
     → m < n
 
 ≤-implies-< zero (suc n) sm≤sn = z<s
-≤-implies-< (suc m) (suc n) ssm≤sn = {!   !}
+≤-implies-< (suc m) (suc n) ssm≤sn = s<s (≤-implies-< m n (inv-s≤s ssm≤sn)) 
+-- Tricky! Needed to use a previous lemma.
