@@ -281,7 +281,7 @@ data Trichotomous (m n : ℕ) : Set where
 
 +-mono-< m n p q m<n p<q = <-trans (+-monoˡ-< m n p m<n) (+-monoʳ-< p q n p<q)
 
--- ≤-iff-<
+-- Ex. 7: ≤-iff-<
 
 ≤-implies-< : ∀ (m n : ℕ)
     → suc m ≤ n
@@ -306,3 +306,22 @@ inv-s<s (s<s m<n) = m<n
 
 <-implies-≤ zero (suc n) z<sn = s≤s (z≤n)
 <-implies-≤ (suc m) (suc n) (s<s m<n) = s≤s (<-implies-≤ m n m<n)
+
+-- Ex. 8: Revisiting Transitivity of < --
+-- Proving transitivity with appeal to relationship between ≤ and <
+<-suc-lemma : ∀ (m p : ℕ)
+    → suc m < p
+    --------
+    → m < p
+
+<-suc-lemma zero (suc p) sm<sp = z<s
+<-suc-lemma (suc m) (suc p) ssm<sp = s<s (<-suc-lemma m p (inv-s<s ssm<sp))
+
+<-trans-revisited : ∀ (m n p : ℕ)
+    → m < n
+    → n < p
+    --------
+    → m < p
+
+<-trans-revisited m n p m<n n<p =
+    <-suc-lemma m p (≤-implies-< (suc m) p (≤-trans (s≤s (<-implies-≤ m n m<n)) (<-implies-≤ n p n<p)))
